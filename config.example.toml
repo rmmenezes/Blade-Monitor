@@ -1,0 +1,22 @@
+# Copie para config.toml e ajuste. Monitore APENAS ativos que você possui
+# ou tem autorização formal para testar.
+
+[targets]
+domains = ["example.com"]          # subdomínios são descobertos via Certificate Transparency
+ips = []                           # IPs ou CIDRs, ex.: ["203.0.113.10", "198.51.100.0/28"]
+exclude = ["*.dev.example.com"]    # padrões glob a ignorar
+
+[scan]
+subdomain_discovery = true
+timeout = 3.0
+workers = 50
+cert_expiry_warning_days = 30
+# ports = [22, 80, 443, 3389]      # omita para usar a lista padrão (~45 portas)
+
+[storage]
+database = "blade_monitor.db"
+report_dir = "reports"
+
+[alerts]
+webhook_url = ""                   # Slack/Mattermost/Teams incoming webhook
+min_severity = "medium"            # info | low | medium | high | critical
