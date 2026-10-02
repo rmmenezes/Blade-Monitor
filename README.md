@@ -1,8 +1,15 @@
 # Blade Monitor
 
-Monitor de **exposição externa** (EASM — *External Attack Surface Monitoring*).
-Descobre periodicamente o que da sua organização está visível na internet,
-avalia riscos e alerta quando algo **novo** aparece.
+Gestão de **superfície de ataque externa** (EASM — *External Attack Surface Management*).
+Descobre periodicamente o que uma organização expõe na internet, avalia riscos,
+atribui uma nota de segurança (A–F) e alerta quando algo **novo** aparece.
+
+Dois modos de uso:
+
+- **CLI** (`blade-monitor`) — um alvo, configuração em TOML, ideal para cron/CI.
+- **Plataforma** (`blade-platform`) — SaaS multi-tenant com API REST, painel web,
+  avaliação de fornecedores e **programa de parceiros para consultorias/MSSPs**.
+  Veja [Plataforma](#plataforma).
 
 🌐 **Página do projeto:** https://rmmenezes.github.io/Blade-Monitor/
 
@@ -81,6 +88,103 @@ a cada push na `main`. Ela inclui um visualizador que abre os arquivos
 `reports/snapshot-*.json` direto no navegador, sem enviar nada para servidor.
 Resultados reais de varredura não são publicados.
 
+## Plataforma
+
+Plataforma multi-tenant inspirada em produtos de *security ratings*, gestão de
+risco de terceiros e varredura contínua. Como o resto do projeto, usa só a
+biblioteca padrão do Python (SQLite, `http.server`); o painel é JS puro.
+
+### Início rápido
+
+```bash
+python -m blade_monitor.platform demo        # dados sintéticos (domínios *.example)
+python -m blade_monitor.platform serve       # http://127.0.0.1:8080
+```
+
+Usuários de demonstração (senha `demo-password-123`): `admin@demo.example`,
+`parceiro@demo.example`, `analista@demo.example`, `cliente@demo.example`.
+
+Em produção:
+
+```bash
+BLADE_ADMIN_PASSWORD=... blade-platform --db /var/lib/blade/platform.db init --email voce@empresa.com
+blade-platform --db /var/lib/blade/platform.db serve --host 127.0.0.1 --port 8080 --secure-cookies
+# opcional: worker separado do servidor web
+blade-platform --db /var/lib/blade/platform.db serve --no-worker --secure-cookies
+blade-platform --db /var/lib/blade/platform.db worker
+```
+
+Publique atrás de um proxy reverso com HTTPS (nginx, Caddy) e use `--secure-cookies`.
+
+### Funcionalidades
+
+| Área | O que faz |
+|---|---|
+| **Nota de segurança** | 0–100 e conceito A–F por categoria (rede, TLS, web, vazamento de informação), normalizada pelo tamanho da superfície, com tendência histórica |
+| **Ciclo de vida dos achados** | `open → resolved` automaticamente quando some na varredura seguinte; reabre se voltar; `accepted`/`false_positive` exigem justificativa e saem da nota |
+| **Verificação de posse** | Varredura ativa só em ativos verificados: domínio por DNS TXT (`_blade-monitor.<domínio>`) ou arquivo `/.well-known/blade-monitor-verification.txt`; IP/CIDR por atestado (contrato/carta) registrado na auditoria |
+| **Risco de terceiros** | Fornecedores avaliados em modo **passivo** (CT logs, DNS, uma requisição HTTP/HTTPS por host — sem varredura de portas e sem exigir autorização) |
+| **Agendamento** | Fila no SQLite; frequência pelo plano (semanal, diária ou a cada 6h); reavaliação semanal de fornecedores |
+| **Alertas** | Webhook por cliente (Slack/Teams/Mattermost) com severidade mínima, só para mudanças |
+| **Relatório executivo** | HTML imprimível em PDF com a marca do parceiro (`/reports/scan/<id>`) |
+| **API REST** | `/api/v1/*` com sessão (cookie + CSRF) ou chave de API (`Authorization: Bearer bm_...`) |
+| **Auditoria** | Login, verificação/atestado de ativos, mudanças de status de achados, usuários etc. |
+
+### Papéis
+
+| Papel | Escopo |
+|---|---|
+| `admin` | Plataforma inteira; aprova parceiros e define níveis negociados |
+| `partner_admin` | Todos os clientes do parceiro, marca, extrato e equipe |
+| `partner_analyst` | Todos os clientes do parceiro (operação: ativos, varreduras, achados) |
+| `org_admin` | A própria organização, inclusive usuários e alertas |
+| `org_viewer` | Somente leitura da própria organização |
+
+O isolamento entre tenants é verificado em cada rota: recursos de outro tenant
+respondem `404`.
+
+### Programa de parceiros
+
+Para consultorias e MSSPs (`#/apply` no painel → aprovação pelo admin):
+
+- **Revenda gerenciada.** O parceiro cadastra clientes no seu portfólio, paga o
+  preço de atacado e define o preço final.
+- **Indicação.** Clientes diretos que se cadastram com o código do parceiro
+  (`#/signup?ref=BM-XXXX`) geram **20% de comissão recorrente**.
+- **Pré-venda.** Avaliação passiva de prospects, com relatório na marca do parceiro.
+- **Extrato mensal** com atacado, margem de revenda, comissões e líquido.
+
+| Nível | Clientes gerenciados | Desconto/margem | White-label | Prospects/mês |
+|---|---|---|---|---|
+| Registered | 0+ | 10% | co-branded | 5 |
+| Silver | 5+ | 20% | ✔ | 20 |
+| Gold | 15+ | 30% | ✔ | 50 |
+| Platinum | 40+ | 40% | ✔ | ilimitado |
+
+Planos (preço de lista mensal, em USD): Essentials 149 (5 ativos, varredura
+semanal), Professional 499 (25 ativos, diária), Enterprise 1.499 (200 ativos, a
+cada 6h). Valores e níveis ficam em `blade_monitor/platform/partners.py`.
+
+### Modelo de nota
+
+Cada achado pesa conforme a severidade (crítico 40, alto 20, médio 8, baixo 3,
+info 1). A penalidade de cada categoria é dividida por `1 + log2(hosts)`, e a
+nota da categoria é `100·e^(−penalidade/20)`. A nota geral é a média ponderada
+(rede 35%, TLS 25%, web 25%, vazamento 15%), com teto de 59 (F) se houver achado
+crítico e de 79 (C) se houver achado alto. Conceitos: A ≥ 90, B ≥ 80, C ≥ 70,
+D ≥ 60, F < 60.
+
+### Salvaguardas
+
+- Sem posse verificada não há varredura ativa; terceiros só em modo passivo.
+- IPs internos/reservados resolvidos a partir de domínios de clientes são
+  descartados antes da varredura, e a verificação HTTP não busca em domínios
+  internos (proteção contra SSRF). `--allow-private-targets` desativa isso,
+  apenas para laboratório.
+- Senhas com scrypt; sessões `HttpOnly`/`SameSite=Strict` com token CSRF;
+  chaves de API guardadas só como hash; limite de falhas de login por IP;
+  cabeçalhos CSP, `X-Frame-Options` e `nosniff`.
+
 ## Testes
 
 ```bash
@@ -88,7 +192,10 @@ python -m unittest discover -s tests -v
 ```
 
 Os testes de integração sobem servidores locais (HTTP, HTTPS autoassinado e
-um serviço com banner SSH) e executam a varredura real contra eles.
+um serviço com banner SSH) e executam a varredura real contra eles. Os testes da
+plataforma exercitam a API via HTTP: fluxo do parceiro, isolamento entre
+tenants, CSRF, chaves de API, verificação de posse, ciclo de vida dos achados,
+nota e extrato.
 
 ## Estrutura
 
@@ -102,4 +209,16 @@ blade_monitor/
   diff.py        # comparação entre snapshots
   report.py      # relatórios Markdown/JSON e webhook
   cli.py         # comandos scan / history / show
+  platform/
+    db.py            # esquema SQLite multi-tenant
+    auth.py          # senhas, sessões, chaves de API, papéis
+    scoring.py       # nota 0–100 / A–F por categoria
+    verification.py  # verificação de posse (DNS TXT / HTTP)
+    partners.py      # planos, níveis, extrato do parceiro
+    engine.py        # varredura ativa/passiva + ciclo de vida dos achados
+    worker.py        # fila e agendamento
+    web.py           # API REST + servidor do painel
+    report_html.py   # relatório executivo white-label
+    demo.py          # dados sintéticos
+    static/          # painel web (HTML/CSS/JS)
 ```

@@ -4,14 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "blade-monitor"
-version = "0.1.0"
-description = "Monitor de exposição externa (External Attack Surface Monitoring)"
+version = "0.2.0"
+description = "Gestão de superfície de ataque externa (EASM) com programa de parceiros"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
 
 [project.scripts]
 blade-monitor = "blade_monitor.cli:main"
+blade-platform = "blade_monitor.platform.cli:main"
 
 [tool.setuptools]
-packages = ["blade_monitor"]
+packages = ["blade_monitor", "blade_monitor.platform"]
+
+[tool.setuptools.package-data]
+"blade_monitor.platform" = ["static/*"]
