@@ -16,6 +16,25 @@ from .worker import Worker
 log = logging.getLogger("blade_monitor.platform")
 
 
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def bootstrap(db: Database) -> None:
+    """Configuração automática no primeiro boot (deploy sem intervenção).
+
+    BLADE_ADMIN_EMAIL + BLADE_ADMIN_PASSWORD criam o administrador se ainda
+    não houver nenhum; BLADE_DEMO=1 carrega dados sintéticos num banco vazio.
+    """
+    email, password = os.environ.get("BLADE_ADMIN_EMAIL"), os.environ.get("BLADE_ADMIN_PASSWORD")
+    if email and password and not db.one("SELECT 1 FROM users WHERE role = 'admin'"):
+        auth.create_user(db, email, password, "admin", name="Administrador")
+        log.info("Administrador %s criado", email)
+    if _env_flag("BLADE_DEMO") and not db.one("SELECT 1 FROM organizations"):
+        demo.seed(db)
+        log.info("Dados de demonstração carregados")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="blade-platform",
                                      description="Plataforma de gestão de superfície de ataque")
@@ -28,10 +47,11 @@ def main(argv: list[str] | None = None) -> int:
     p_init.add_argument("--name", default="Administrador")
 
     p_serve = sub.add_parser("serve", help="inicia API + painel web (e o worker)")
-    p_serve.add_argument("--host", default="127.0.0.1")
-    p_serve.add_argument("--port", type=int, default=8080)
+    p_serve.add_argument("--host", default=os.environ.get("BLADE_HOST", "127.0.0.1"))
+    p_serve.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8080)))
     p_serve.add_argument("--no-worker", action="store_true", help="não executa a fila neste processo")
-    p_serve.add_argument("--secure-cookies", action="store_true", help="use atrás de HTTPS")
+    p_serve.add_argument("--secure-cookies", action="store_true",
+                         default=_env_flag("BLADE_SECURE_COOKIES"), help="use atrás de HTTPS")
     p_serve.add_argument("--allow-private-targets", action="store_true",
                          help="aceita IPs privados/loopback (apenas laboratório)")
 
@@ -71,6 +91,7 @@ def main(argv: list[str] | None = None) -> int:
             pass
         return 0
 
+    bootstrap(db)
     app = App(db, Settings(allow_private_targets=args.allow_private_targets,
                            secure_cookies=args.secure_cookies, engine=engine_settings))
     w = None if args.no_worker else Worker(db, engine_settings).start()

@@ -132,6 +132,22 @@ class EngineSafetyTests(unittest.TestCase):
         self.assertEqual(engine.public_hosts(hosts), {"www.ex.com": ["8.8.8.8"]})
 
 
+class BootstrapTests(unittest.TestCase):
+    def test_env_bootstrap_is_idempotent(self):
+        from unittest import mock
+        from blade_monitor.platform import cli
+        with tempfile.TemporaryDirectory() as d:
+            db = Database(os.path.join(d, "b.db"))
+            env = {"BLADE_ADMIN_EMAIL": "ops@x.example", "BLADE_ADMIN_PASSWORD": "senha-super-secreta",
+                   "BLADE_DEMO": "1"}
+            with mock.patch.dict(os.environ, env):
+                cli.bootstrap(db)
+                cli.bootstrap(db)  # segundo boot não duplica nada
+            self.assertEqual(db.one("SELECT COUNT(*) AS n FROM users WHERE role = 'admin'")["n"], 2)
+            self.assertEqual(db.one("SELECT COUNT(*) AS n FROM organizations")["n"], 4)
+            self.assertEqual(auth.authenticate(db, "ops@x.example", "senha-super-secreta")["role"], "admin")
+
+
 class PartnerProgramTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

@@ -116,6 +116,52 @@ blade-platform --db /var/lib/blade/platform.db worker
 
 Publique atrás de um proxy reverso com HTTPS (nginx, Caddy) e use `--secure-cookies`.
 
+### Publicação automática
+
+A cada push na `main`, o workflow [`release`](.github/workflows/release.yml):
+
+1. roda os testes;
+2. publica a imagem Docker em `ghcr.io/rmmenezes/blade-monitor` (tags `latest`,
+   versão e `sha-…`);
+3. se a versão do `pyproject.toml` ainda não tiver tag, cria a tag `vX.Y.Z` e o
+   GitHub Release com os pacotes Python. **Para lançar uma versão, basta subir o
+   número da versão.**
+
+A página do projeto (`docs/`) é publicada no GitHub Pages pelo workflow `pages`.
+
+O container se configura só com variáveis de ambiente:
+
+| Variável | Efeito |
+|---|---|
+| `BLADE_ADMIN_EMAIL` / `BLADE_ADMIN_PASSWORD` | cria o administrador no primeiro boot (se não houver nenhum) |
+| `BLADE_SECURE_COOKIES=1` | cookies `Secure` (use atrás de HTTPS) |
+| `BLADE_DEMO=1` | carrega os dados de demonstração num banco vazio |
+| `PORT` | porta HTTP (padrão 8080) |
+| `BLADE_DB` | caminho do SQLite (padrão `/data/platform.db`, volume persistente) |
+
+**Servidor próprio com HTTPS automático** (Caddy + Let's Encrypt):
+
+```bash
+cat > .env <<EOT
+DOMAIN=easm.suaempresa.com
+BLADE_ADMIN_EMAIL=voce@suaempresa.com
+BLADE_ADMIN_PASSWORD=troque-esta-senha
+EOT
+docker compose up -d
+```
+
+**Render (um clique, redeploy automático a cada push):**
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/rmmenezes/Blade-Monitor)
+
+**Só o container:**
+
+```bash
+docker run -d -p 8080:8080 -v blade-data:/data \
+  -e BLADE_ADMIN_EMAIL=voce@suaempresa.com -e BLADE_ADMIN_PASSWORD=troque-esta-senha \
+  ghcr.io/rmmenezes/blade-monitor:latest
+```
+
 ### Funcionalidades
 
 | Área | O que faz |

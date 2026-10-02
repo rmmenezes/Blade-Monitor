@@ -1,0 +1,31 @@
+# Auto-hospedagem com HTTPS automático (Let's Encrypt via Caddy).
+#   1. aponte o DNS de $DOMAIN para este servidor
+#   2. crie um arquivo .env com DOMAIN, BLADE_ADMIN_EMAIL e BLADE_ADMIN_PASSWORD
+#   3. docker compose up -d
+services:
+  app:
+    image: ghcr.io/rmmenezes/blade-monitor:latest
+    build: .
+    restart: unless-stopped
+    environment:
+      BLADE_ADMIN_EMAIL: ${BLADE_ADMIN_EMAIL:?defina no .env}
+      BLADE_ADMIN_PASSWORD: ${BLADE_ADMIN_PASSWORD:?defina no .env}
+      BLADE_SECURE_COOKIES: "1"
+      BLADE_DEMO: ${BLADE_DEMO:-0}
+    volumes:
+      - blade-data:/data
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [app]
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?defina no .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+volumes:
+  blade-data:
+  caddy-data:
