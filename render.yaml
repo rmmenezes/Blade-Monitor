@@ -1,0 +1,21 @@
+# Blueprint do Render: deploy com um clique e redeploy automático a cada push na main.
+services:
+  - type: web
+    name: blade-monitor
+    runtime: docker
+    plan: starter            # disco persistente exige plano pago
+    autoDeploy: true
+    healthCheckPath: /api/v1/program
+    envVars:
+      - key: BLADE_ADMIN_EMAIL
+        sync: false          # informado no momento do deploy
+      - key: BLADE_ADMIN_PASSWORD
+        sync: false
+      - key: BLADE_SECURE_COOKIES
+        value: "1"
+      - key: BLADE_DEMO
+        value: "0"
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1

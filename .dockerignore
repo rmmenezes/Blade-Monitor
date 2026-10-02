@@ -1,0 +1,9 @@
+.git
+.github
+docs
+tests
+reports
+**/__pycache__
+*.db
+*.db-*
+config.toml

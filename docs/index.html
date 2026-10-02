@@ -72,7 +72,7 @@ footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted);font
 <body>
 <header><div class="wrap"><nav>
   <a class="brand" href="#"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z" fill="var(--accent)"/></svg>Blade Monitor</a>
-  <div class="links"><a href="#como-funciona">Como funciona</a><a href="#regras">Regras</a><a href="#visualizador">Visualizador</a><a href="https://github.com/rmmenezes/Blade-Monitor">GitHub</a></div>
+  <div class="links"><a href="#como-funciona">Como funciona</a><a href="#plataforma">Plataforma</a><a href="#parceiros">Parceiros</a><a href="#regras">Regras</a><a href="#visualizador">Visualizador</a><a href="https://github.com/rmmenezes/Blade-Monitor">GitHub</a></div>
 </nav></div></header>
 
 <main class="wrap">
@@ -111,6 +111,32 @@ footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted);font
   </table></div>
 </section>
 
+<section id="plataforma">
+  <h2>Plataforma multi-tenant</h2>
+  <p class="lead">Além do CLI, o Blade Monitor inclui uma plataforma web (API REST + painel) para gerir a superfície de ataque de várias organizações.</p>
+  <div class="grid">
+    <div class="card"><h3>Nota A–F</h3><p>Nota de 0 a 100 por categoria (rede, TLS, web, vazamento de informação), com tendência histórica e relatório executivo.</p></div>
+    <div class="card"><h3>Ciclo de vida dos achados</h3><p>Achados abrem, resolvem e reabrem sozinhos entre varreduras; risco aceito e falso positivo exigem justificativa.</p></div>
+    <div class="card"><h3>Posse verificada</h3><p>Varredura ativa só após verificação por DNS TXT ou arquivo HTTP; IPs exigem atestado registrado em auditoria.</p></div>
+    <div class="card"><h3>Risco de terceiros</h3><p>Fornecedores avaliados de forma passiva (CT logs, DNS e uma visita HTTP/HTTPS), sem varredura de portas.</p></div>
+  </div>
+</section>
+
+<section id="parceiros">
+  <h2>Programa de parceiros para consultorias</h2>
+  <p class="lead">Consultorias e MSSPs gerenciam todos os clientes num portfólio único, com a própria marca.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Nível</th><th>Clientes gerenciados</th><th>Margem na revenda</th><th>Benefícios</th></tr></thead>
+    <tbody>
+      <tr><td>Registered</td><td>0+</td><td>10%</td><td>Relatórios co-branded · 5 avaliações de prospects/mês</td></tr>
+      <tr><td>Silver</td><td>5+</td><td>20%</td><td>White-label · 20 prospects/mês</td></tr>
+      <tr><td>Gold</td><td>15+</td><td>30%</td><td>White-label · 50 prospects/mês</td></tr>
+      <tr><td>Platinum</td><td>40+</td><td>40%</td><td>White-label · prospects ilimitados</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Indicações de clientes diretos rendem 20% de comissão recorrente. O extrato mensal mostra atacado, margem e comissões.</p>
+</section>
+
 <section id="instalar">
   <h2>Instalar e executar</h2>
   <p class="lead">Python 3.11 ou superior, sem dependências externas.</p>
@@ -119,7 +145,11 @@ cd Blade-Monitor
 cp config.example.toml config.toml        # defina seus domínios e IPs
 python -m blade_monitor scan              # uma varredura
 python -m blade_monitor scan --interval 360   # contínuo, a cada 6 horas
-python -m blade_monitor history           # snapshots anteriores</code></pre>
+python -m blade_monitor history           # snapshots anteriores
+
+# Plataforma web (API + painel + fila de varreduras)
+python -m blade_monitor.platform demo     # dados sintéticos para conhecer o painel
+python -m blade_monitor.platform serve    # http://127.0.0.1:8080</code></pre>
   <p class="note">Monitore apenas domínios e IPs que você possui ou tem autorização formal para testar.</p>
 </section>
 
