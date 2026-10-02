@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blade Monitor</title>
+<meta name="description" content="Monitor de exposição externa (EASM) open source: descobre, varre e alerta sobre o que sua organização expõe na internet.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z' fill='%232f6fed'/></svg>">
+<style>
+:root{
+  --bg:#f7f8fa;--surface:#fff;--text:#16181d;--muted:#5d6472;--border:#e2e5eb;
+  --accent:#2f6fed;--accent-soft:#e8effd;--code:#f0f2f5;
+  --critical:#c62828;--high:#e8590c;--medium:#c99700;--low:#2f6fed;--info:#7a8290;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1115;--surface:#171a20;--text:#e8eaee;--muted:#9aa1ad;--border:#2a2f38;
+  --accent:#6b9bff;--accent-soft:#1c2740;--code:#1f232b;
+  --critical:#ff6b6b;--high:#ff922b;--medium:#ffd43b;--low:#6b9bff;--info:#9aa1ad;}}
+:root[data-theme="dark"]{
+  --bg:#0f1115;--surface:#171a20;--text:#e8eaee;--muted:#9aa1ad;--border:#2a2f38;
+  --accent:#6b9bff;--accent-soft:#1c2740;--code:#1f232b;
+  --critical:#ff6b6b;--high:#ff922b;--medium:#ffd43b;--low:#6b9bff;--info:#9aa1ad;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+header{border-bottom:1px solid var(--border);background:var(--surface)}
+nav{display:flex;align-items:center;justify-content:space-between;height:60px;gap:12px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;text-decoration:none;color:var(--text)}
+nav .links{display:flex;gap:16px;font-size:15px;flex-wrap:wrap}
+nav .links a{color:var(--muted);text-decoration:none}nav .links a:hover{color:var(--text)}
+.hero{padding:64px 0 40px}
+.hero h1{font-size:clamp(30px,5vw,44px);line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
+.hero p{font-size:19px;color:var(--muted);max-width:680px;margin:0 0 24px}
+.btn{display:inline-block;padding:10px 18px;border-radius:8px;font-weight:600;text-decoration:none;border:1px solid var(--border);color:var(--text);background:var(--surface);cursor:pointer;font-size:15px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.actions{display:flex;gap:12px;flex-wrap:wrap}
+section{padding:40px 0}
+h2{font-size:26px;margin:0 0 8px;letter-spacing:-.01em}
+.lead{color:var(--muted);margin:0 0 24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.card h3{margin:0 0 6px;font-size:17px}.card p{margin:0;color:var(--muted);font-size:15px}
+.step{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.05em}
+pre{background:var(--code);border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto;font-size:14px;line-height:1.5;margin:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+tr:last-child td{border-bottom:0}
+.sev{display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
+.sev::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c)}
+.critical{--c:var(--critical)}.high{--c:var(--high)}.medium{--c:var(--medium)}.low{--c:var(--low)}.info{--c:var(--info)}
+.drop{border:2px dashed var(--border);border-radius:12px;padding:28px;text-align:center;background:var(--surface);color:var(--muted)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.note{font-size:14px;color:var(--muted);margin-top:10px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:20px 0}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.stat b{display:block;font-size:26px;line-height:1.2}.stat span{font-size:13px;color:var(--muted)}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--border);margin:8px 0 20px}
+.bar i{display:block;background:var(--c)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.muted{color:var(--muted)}
+h3.sub{margin:28px 0 10px;font-size:18px}
+footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted);font-size:14px;margin-top:40px}
+.warn{background:var(--accent-soft);border-radius:10px;padding:14px 16px;font-size:15px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><nav>
+  <a class="brand" href="#"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z" fill="var(--accent)"/></svg>Blade Monitor</a>
+  <div class="links"><a href="#como-funciona">Como funciona</a><a href="#regras">Regras</a><a href="#visualizador">Visualizador</a><a href="https://github.com/rmmenezes/Blade-Monitor">GitHub</a></div>
+</nav></div></header>
+
+<main class="wrap">
+<div class="hero">
+  <h1>Saiba o que sua empresa expõe na internet antes de um atacante saber.</h1>
+  <p>Blade Monitor é um monitor de exposição externa (EASM) open source. Ele descobre subdomínios, varre serviços, avalia riscos e avisa quando algo novo aparece na sua superfície de ataque.</p>
+  <div class="actions">
+    <a class="btn primary" href="#instalar">Começar</a>
+    <a class="btn" href="#visualizador">Ver relatório de exemplo</a>
+  </div>
+</div>
+
+<section id="como-funciona">
+  <h2>Como funciona</h2>
+  <p class="lead">Cada execução gera um snapshot; o monitor compara com o anterior e só alerta sobre mudanças.</p>
+  <div class="grid">
+    <div class="card"><div class="step">1 · DESCOBERTA</div><h3>Ativos</h3><p>Subdomínios via Certificate Transparency (crt.sh), resolução DNS, IPs e faixas CIDR.</p></div>
+    <div class="card"><div class="step">2 · VARREDURA</div><h3>Serviços</h3><p>Portas TCP abertas, certificados TLS, respostas HTTP e banners de serviço.</p></div>
+    <div class="card"><div class="step">3 · RISCO</div><h3>Achados</h3><p>Regras classificam cada problema de informativo a crítico.</p></div>
+    <div class="card"><div class="step">4 · ALERTA</div><h3>Mudanças</h3><p>Diff entre execuções, relatórios Markdown/JSON e webhook para Slack, Teams ou Mattermost.</p></div>
+  </div>
+</section>
+
+<section id="regras">
+  <h2>O que é detectado</h2>
+  <p class="lead">Regras incluídas na versão atual.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Severidade</th><th>Regra</th><th>Exemplos</th></tr></thead>
+    <tbody>
+      <tr><td><span class="sev critical">crítica</span></td><td><code>risky-port</code></td><td>Redis, MongoDB, Elasticsearch, SMB, Telnet, Docker API sem TLS</td></tr>
+      <tr><td><span class="sev high">alta</span></td><td><code>risky-port</code> · <code>cert-expired</code> · <code>sensitive-panel</code></td><td>RDP, bancos de dados, FTP, VNC · certificado vencido · listagem de diretório</td></tr>
+      <tr><td><span class="sev medium">média</span></td><td><code>cert-expiring</code> · <code>cert-self-signed</code> · <code>weak-tls</code></td><td>Certificado vencendo, autoassinado, não confiável ou sem o hostname · TLS 1.0/1.1 · painéis de login</td></tr>
+      <tr><td><span class="sev low">baixa</span></td><td><code>http-no-redirect</code> · <code>server-version-disclosure</code></td><td>HTTP sem HTTPS · <code>nginx/1.18.0</code>, <code>OpenSSH_8.9p1</code></td></tr>
+      <tr><td><span class="sev info">info</span></td><td><code>missing-security-headers</code></td><td>HSTS, CSP, X-Frame-Options, X-Content-Type-Options</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="instalar">
+  <h2>Instalar e executar</h2>
+  <p class="lead">Python 3.11 ou superior, sem dependências externas.</p>
+<pre><code>git clone https://github.com/rmmenezes/Blade-Monitor.git
+cd Blade-Monitor
+cp config.example.toml config.toml        # defina seus domínios e IPs
+python -m blade_monitor scan              # uma varredura
+python -m blade_monitor scan --interval 360   # contínuo, a cada 6 horas
+python -m blade_monitor history           # snapshots anteriores</code></pre>
+  <p class="note">Monitore apenas domínios e IPs que você possui ou tem autorização formal para testar.</p>
+</section>
+
+<section id="visualizador">
+  <h2>Visualizador de relatórios</h2>
+  <p class="lead">Abra um arquivo <code>reports/snapshot-*.json</code> gerado pelo monitor. O arquivo é lido apenas no seu navegador e não é enviado para lugar nenhum.</p>
+  <div class="drop" id="drop">
+    <p style="margin:0 0 12px">Arraste o JSON aqui, ou</p>
+    <div class="actions" style="justify-content:center">
+      <label class="btn primary">Escolher arquivo<input type="file" id="file" accept=".json,application/json" hidden></label>
+      <button class="btn" id="demo">Carregar exemplo</button>
+    </div>
+  </div>
+  <div id="view"></div>
+</section>
+</main>
+
+<footer><div class="wrap">Blade Monitor · open source · <a href="https://github.com/rmmenezes/Blade-Monitor">código no GitHub</a></div></footer>
+
+<script>
+const SEV = ["critical","high","medium","low","info"];
+const SEV_PT = {critical:"crítica",high:"alta",medium:"média",low:"baixa",info:"info"};
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const DEMO = {
+  started_at:"2026-10-02T06:00:00+00:00", finished_at:"2026-10-02T06:04:12+00:00",
+  hosts:{"exemplo.com.br":["203.0.113.10"],"www.exemplo.com.br":["203.0.113.10"],"vpn.exemplo.com.br":["203.0.113.20"],"grafana.exemplo.com.br":["203.0.113.30"],"cache.exemplo.com.br":["203.0.113.40"]},
+  services:[
+    {host:"www.exemplo.com.br",ip:"203.0.113.10",port:443,banner:"",tls:{protocol:"TLSv1.3",days_left:12,not_after:"2026-10-14T23:59:59+00:00"},http:{status:200,title:"Exemplo — Página inicial",server:"nginx/1.18.0"}},
+    {host:"www.exemplo.com.br",ip:"203.0.113.10",port:80,banner:"",tls:null,http:{status:200,title:"Exemplo — Página inicial",server:"nginx/1.18.0"}},
+    {host:"vpn.exemplo.com.br",ip:"203.0.113.20",port:22,banner:"SSH-2.0-OpenSSH_8.9p1 Ubuntu",tls:null,http:null},
+    {host:"vpn.exemplo.com.br",ip:"203.0.113.20",port:3389,banner:"",tls:null,http:null},
+    {host:"grafana.exemplo.com.br",ip:"203.0.113.30",port:3000,banner:"",tls:{protocol:"TLSv1.2",days_left:200,self_signed:true},http:{status:200,title:"Grafana"}},
+    {host:"cache.exemplo.com.br",ip:"203.0.113.40",port:6379,banner:"",tls:null,http:null}
+  ],
+  findings:[
+    {rule:"risky-port",severity:"critical",asset:"cache.exemplo.com.br:6379",title:"Redis exposto à internet",detail:"IP 203.0.113.40"},
+    {rule:"risky-port",severity:"high",asset:"vpn.exemplo.com.br:3389",title:"RDP exposto à internet",detail:"IP 203.0.113.20"},
+    {rule:"cert-expiring",severity:"medium",asset:"www.exemplo.com.br:443",title:"Certificado expira em 12 dias",detail:"2026-10-14T23:59:59+00:00"},
+    {rule:"cert-self-signed",severity:"medium",asset:"grafana.exemplo.com.br:3000",title:"Certificado autoassinado",detail:"commonName=grafana"},
+    {rule:"sensitive-panel",severity:"medium",asset:"grafana.exemplo.com.br:3000",title:"Página sensível exposta: Grafana",detail:"https://grafana.exemplo.com.br:3000/"},
+    {rule:"http-no-redirect",severity:"low",asset:"www.exemplo.com.br:80",title:"HTTP sem redirecionamento para HTTPS",detail:"status 200"},
+    {rule:"server-version-disclosure",severity:"low",asset:"www.exemplo.com.br:443",title:"Servidor revela versão",detail:"nginx/1.18.0"},
+    {rule:"banner-version",severity:"low",asset:"vpn.exemplo.com.br:22",title:"Banner revela software/versão",detail:"SSH-2.0-OpenSSH_8.9p1 Ubuntu"},
+    {rule:"missing-security-headers",severity:"info",asset:"www.exemplo.com.br:443",title:"Cabeçalhos de segurança ausentes",detail:"content-security-policy, x-frame-options"}
+  ]
+};
+
+let state = {snap:null, filter:new Set(SEV)};
+
+function render(){
+  const s = state.snap, view = document.getElementById("view");
+  if(!s){view.innerHTML="";return;}
+  const findings = s.findings || [], services = s.services || [];
+  const counts = Object.fromEntries(SEV.map(k=>[k,0]));
+  findings.forEach(f=>counts[f.severity] = (counts[f.severity]||0)+1);
+  const total = findings.length || 1;
+  const sorted = findings.filter(f=>state.filter.has(f.severity))
+    .sort((a,b)=>SEV.indexOf(a.severity)-SEV.indexOf(b.severity) || a.asset.localeCompare(b.asset));
+
+  view.innerHTML = `
+    <p class="note">Varredura de ${esc(s.started_at)} até ${esc(s.finished_at)}</p>
+    <div class="stats">
+      <div class="stat"><b>${Object.keys(s.hosts||{}).length}</b><span>hosts ativos</span></div>
+      <div class="stat"><b>${services.length}</b><span>serviços expostos</span></div>
+      <div class="stat"><b>${findings.length}</b><span>achados</span></div>
+      ${SEV.slice(0,3).map(k=>`<div class="stat"><b class="sev ${k}">${counts[k]}</b><span>${SEV_PT[k]}</span></div>`).join("")}
+    </div>
+    <div class="bar" role="img" aria-label="Distribuição por severidade">${SEV.map(k=>counts[k]?`<i class="${k}" style="width:${counts[k]/total*100}%" title="${SEV_PT[k]}: ${counts[k]}"></i>`:"").join("")}</div>
+    <h3 class="sub">Achados</h3>
+    <div class="filters">${SEV.map(k=>`<button class="chip" data-sev="${k}" aria-pressed="${state.filter.has(k)}"><span class="sev ${k}">${SEV_PT[k]} (${counts[k]})</span></button>`).join("")}</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Severidade</th><th>Ativo</th><th>Achado</th><th>Detalhe</th></tr></thead>
+      <tbody>${sorted.map(f=>`<tr><td><span class="sev ${esc(f.severity)}">${SEV_PT[f.severity]||esc(f.severity)}</span></td><td><code>${esc(f.asset)}</code></td><td>${esc(f.title)}</td><td class="muted">${esc(f.detail)}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">Nenhum achado com esse filtro.</td></tr>`}</tbody>
+    </table></div>
+    <h3 class="sub">Inventário de serviços</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Host</th><th>IP</th><th>Porta</th><th>TLS</th><th>HTTP</th><th>Banner</th></tr></thead>
+      <tbody>${services.map(v=>`<tr><td>${esc(v.host)}</td><td>${esc(v.ip)}</td><td>${esc(v.port)}</td>
+        <td>${v.tls?esc(v.tls.protocol)+(v.tls.days_left!=null?` <span class="muted">(${esc(v.tls.days_left)}d)</span>`:""):""}</td>
+        <td>${v.http&&v.http.status?esc(v.http.status)+" "+esc(v.http.title):""}</td>
+        <td class="muted">${esc(v.banner)}</td></tr>`).join("")}</tbody>
+    </table></div>`;
+  view.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{
+    const k=b.dataset.sev; state.filter.has(k)?state.filter.delete(k):state.filter.add(k); render();
+  });
+}
+
+function load(obj){
+  if(!obj || !Array.isArray(obj.findings) || !Array.isArray(obj.services)){
+    document.getElementById("view").innerHTML='<p class="warn">Este arquivo não parece um snapshot do Blade Monitor.</p>';return;
+  }
+  state.snap=obj; render();
+}
+function readFile(f){
+  const r=new FileReader();
+  r.onload=()=>{try{load(JSON.parse(r.result))}catch{load(null)}};
+  r.readAsText(f);
+}
+document.getElementById("file").onchange=e=>e.target.files[0]&&readFile(e.target.files[0]);
+document.getElementById("demo").onclick=()=>load(DEMO);
+const drop=document.getElementById("drop");
+["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over")}));
+drop.addEventListener("drop",e=>e.dataTransfer.files[0]&&readFile(e.dataTransfer.files[0]));
+</script>
+</body>
+</html>

@@ -4,6 +4,8 @@ Monitor de **exposição externa** (EASM — *External Attack Surface Monitoring
 Descobre periodicamente o que da sua organização está visível na internet,
 avalia riscos e alerta quando algo **novo** aparece.
 
+🌐 **Página do projeto:** https://rmmenezes.github.io/Blade-Monitor/
+
 > ⚠️ Use apenas em domínios/IPs que você possui ou tem autorização formal para testar.
 
 ## Como funciona
@@ -71,6 +73,13 @@ Exemplo de agendamento via cron (diário, 6h):
 Configure `alerts.webhook_url` com um *incoming webhook* do Slack, Mattermost
 ou Teams. Só são enviados alertas para **mudanças** (novos hosts, serviços ou
 achados com severidade ≥ `alerts.min_severity`).
+
+## Página web
+
+A pasta `docs/` contém a página pública do projeto, publicada no GitHub Pages
+a cada push na `main`. Ela inclui um visualizador que abre os arquivos
+`reports/snapshot-*.json` direto no navegador, sem enviar nada para servidor.
+Resultados reais de varredura não são publicados.
 
 ## Testes
 
